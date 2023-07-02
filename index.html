@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="A todo list application" />
+    <meta name="theme-color" content="#008080" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="./src/icons/icon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="./src/data/webmanifest.webmanifest" />
+    <link rel="stylesheet" href="./src/css/style.css" />
+    <title>Todo-list</title>
+  </head>
+  <body>
+    <div id="app">
+      <template id="task-template">
+        <div>
+          <hgroup>
+            <div>
+              <button id="edit">
+                <img src="./src/svg/edit.svg" alt="edit" width="20" height="20" />
+              </button>
+              <button id="close">
+                <img src="./src/svg/close.svg" alt="close" width="20" height="20" />
+              </button>
+            </div>
+          </hgroup>
+          <span></span>
+        </div>
+      </template>
+      <template id="task-content-edit">
+        <div contenteditable="true" id="task-input-edit" autocapitalize="off"></div>
+      </template>
+      <div id="task-container"></div>
+      <form id="task-create">
+        <div id="task-input-joiner">
+          <div contenteditable="true" id="task-input" autocapitalize="off"></div>
+          <button id="task-submit-button">
+            <img src="./src/svg/send.svg" alt="create task" width="20" height="20" />
+          </button>
+        </div>
+        <div id="task-info">
+          <div>Number of tasks : <span id="task-count">0</span></div>
+          <button id="task-delete-all">
+            <img src="./src/svg/delete.svg" width="30" height="30" alt="delete all" />
+          </button>
+          <button id="task-sort-button">
+            <img src="./src/svg/sort_alphabetically.svg" height="30" width="30" alt="sort" />
+          </button>
+          <div id="task-search-wrapper">
+            <img src="./src/svg/search.svg" alt="Search" width="30" height="30" />
+            <input
+              type="text"
+              placeholder="Search task"
+              maxlength="60"
+              id="task-search-input"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+      </form>
+      <dialog id="modal">
+        <div id="closeModal"></div>
+        <div id="dialogBox">
+          <h2>Are you sure to delete all tasks ?</h2>
+          <button>Yes</button><button>No</button>
+        </div>
+      </dialog>
+      <noscript>
+        <div id="javascript-error">
+          <h1>Error rendering the page</h1>
+          <p>It seems that Javascript is disabled. Without it, this page can't run.</p>
+        </div>
+      </noscript>
+    </div>
+    <script src="./service-worker.js"></script>
+    <script src="./src/js/script.js" type="module"></script>
+  </body>
+</html>

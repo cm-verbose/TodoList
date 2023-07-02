@@ -1,0 +1,314 @@
+@font-face {
+  font-family: wix;
+  font-display: swap;
+  src: url(../font/Variable_Wix-made-for-text.ttf);
+}
+
+body {
+  font-family: wix, Arial, Helvetica, sans-serif;
+  font-size: 20px;
+  margin: 0px;
+  background-color: #222;
+}
+
+body::-webkit-scrollbar {
+  background-color: #222;
+  border: 1px solid #888;
+}
+
+body::-webkit-scrollbar-thumb {
+  background-color: #888;
+}
+
+input,
+textarea,
+button,
+option,
+select {
+  font-family: wix, Arial, Helvetica, sans-serif;
+}
+
+#task-create {
+  position: fixed;
+  left: 50%;
+  top: 65%;
+  width: 50%;
+  transform: translate(-50%);
+}
+
+#task-input-joiner {
+  background-color: #222;
+  position: relative;
+  left: 50%;
+  transform: translate(-50%);
+  margin-top: 50px;
+  border: 1px solid #666;
+  width: 75%;
+}
+
+#task-input {
+  min-height: 65px;
+  max-height: 125px;
+  overflow: auto;
+  outline: none;
+  box-sizing: border-box;
+  height: 100%;
+  position: relative;
+  padding: 20px 75px 20px 15px;
+  color: #666;
+}
+
+*::selection {
+  background-color: #6665;
+}
+
+#task-input:empty::before {
+  pointer-events: none;
+  position: absolute;
+  color: #555;
+  content: "Create task";
+}
+
+#task-input::-webkit-scrollbar {
+  background-color: transparent;
+  width: 8px;
+}
+
+#task-input::-webkit-scrollbar-thumb {
+  border: 1px solid #888;
+}
+
+#task-submit-button {
+  align-self: end;
+  border: none;
+  background-color: transparent;
+  outline: none;
+  aspect-ratio: 1/1;
+  height: fit-content;
+  position: absolute;
+  top: 50%;
+  left: 90%;
+  transform: translate(0%, -50%);
+}
+
+#task-submit-button > img {
+  position: relative;
+  cursor: pointer;
+  -webkit-user-drag: none;
+  user-select: none;
+  width: 65%;
+  height: 65%;
+}
+
+#task-container {
+  position: absolute;
+  width: 50%;
+  top: 50px;
+  left: 50%;
+  transform: translate(-50%);
+}
+
+#task-container > div {
+  position: relative;
+  width: 55%;
+  left: 50%;
+  transform: translate(-50%);
+  border: 1px solid #888;
+  box-sizing: border-box;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+#task-container > div > span {
+  color: rgb(0, 174, 174);
+  line-height: 1.5;
+  overflow: hidden;
+  word-break: break-all;
+}
+
+#task-container > div > div[contenteditable="true"] {
+  color: rgb(0, 174, 174);
+  outline: none;
+}
+
+#task-container > div > hgroup {
+  display: grid;
+  width: 100%;
+  user-select: none;
+}
+
+#task-container > div > hgroup > div {
+  justify-self: end;
+}
+
+#task-container > div > hgroup > div > button {
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  width: fit-content;
+  aspect-ratio: 1/1;
+}
+
+#task-container > div > hgroup > div > button > img {
+  user-select: none;
+  pointer-events: none;
+}
+
+#task-container > div:last-child {
+  margin-bottom: 50vh;
+}
+
+#task-info {
+  position: fixed;
+  width: 75%;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  color: #ddd;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+}
+
+#app-ctx-menu {
+  position: fixed;
+  width: 200px;
+  height: 300px;
+  background-color: #222;
+  border: 1px solid #888;
+  z-index: 900;
+}
+
+#app-ctx-menu-cover {
+  background-color: transparent;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 800;
+}
+
+#task-info > button {
+  position: relative;
+  background-color: transparent;
+  border: none;
+  height: 35px;
+  width: 35px;
+  cursor: pointer;
+}
+
+#task-info > button > img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 30px;
+  width: 30px;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+#modal {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  width: 100vw;
+  height: 100vh;
+  background-color: transparent;
+  padding: 0px;
+  margin: 0px;
+  border: none;
+  outline: none;
+}
+
+#closeModal {
+  background-color: #00000088;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  margin: 0px;
+  cursor: pointer;
+  z-index: 10;
+  border: none;
+}
+
+#dialogBox {
+  border: 1px solid #888;
+  z-index: 20;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 400px;
+  color: #888;
+  box-sizing: border-box;
+  padding: 40px 40px;
+}
+
+#dialogBox > h2 {
+  margin: 0px;
+  font-weight: 100;
+  font-size: 32px;
+  width: 75%;
+}
+
+#dialogBox > button {
+  background-color: transparent;
+  border: 1px solid #888;
+  color: #888;
+  cursor: pointer;
+  font-size: 24px;
+  margin: 20px 0;
+  margin-right: 20px;
+  width: 200px;
+  height: 50px;
+  user-select: none;
+}
+
+#task-search-wrapper {
+  display: flex;
+  gap: 10px;
+}
+
+#task-search-wrapper > img {
+  width: 30px;
+  height: 30px;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+#task-search-wrapper > input {
+  font-size: 20px;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid #eee;
+  outline: none;
+  color: #ddd;
+}
+
+noscript {
+  z-index: 900;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  background-color: #222;
+  color: #eee;
+}
+
+#javascript-error {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  padding: 40px;
+  width: 50%;
+  height: 50%;
+  border: 1px solid #555;
+}
+
+#javascript-error > p {
+  line-height: 1.75;
+}
