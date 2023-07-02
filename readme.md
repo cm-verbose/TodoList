@@ -1,13 +1,13 @@
 # Todo list 
-A todo list apllication for creating todos, tasks. 
+A todo list application for creating and managing tasks. Is hosted [here](https://cm-verbose.github.io/TodoList/) on Github Pages. 
 
 ## Features 
+Features of this app includes : 
 
-- Creating a task
-- Deleting a task 
-  - Deleting all tasks, with a button
-- Editing a task 
-- Sorting tasks
-- Search for a task, with a specific query 
-- On refresh, tasks persists with IndexedDB or LocalStorage
-- Can be installed, is PWA conform 
+- Creating a task ;
+- Deleting a task, or deleting all tasks with one button ;
+- Editing an existing task ;
+- Sorting tasks (automatically sorts if IndexedDB is supported, on page reload) ;
+- Search for a task, with a specific query ;
+- On refresh, tasks persists with IndexedDB or LocalStorage ;
+- App can be installed, since a service worker is defined, along with support for PWA ;
