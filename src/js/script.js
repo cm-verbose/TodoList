@@ -1,471 +1,196 @@
-"use strict";
-
-/**
- * @author cmvb
- **/
+import voidLikeRegex from "./regex.js";
+import Task from "./task.js";
 
 class Main {
+  databaseName = "TaskList";
+
   constructor() {
-    this.formCreate = document.querySelector("#task-create");
-    this.taskInput = document.querySelector("#task-input");
-    this.taskButton = document.querySelector("#task-submit-button");
-    this.taskTemplate = document.querySelector("#task-template");
-    this.taskList = document.querySelector("#task-container");
-    this.taskEditTemplate = document.querySelector("#task-content-edit");
     this.taskCount = document.querySelector("#task-count");
-    this.taskDeleteAllButton = document.querySelector("#task-delete-all");
-    this.taskDialog = document.querySelector("#modal");
-    this.taskDialogClose = document.querySelector("#closeModal");
-    this.taskDialogButtons = document.querySelectorAll("#dialogBox > button");
-    this.taskSortButton = document.querySelector("#task-sort-button");
-    this.taskSearchInput = document.querySelector("#task-search-input");
-    this.taskDB = null;
-    this.checkStoredData();
+    this.taskCompletedCount = document.querySelector("#task-completion");
+    this.taskForm = document.querySelector("#task-form");
+    this.taskInput = document.querySelector("#task-submit-input");
+    this.taskList = document.querySelector("#task-container");
+    this.taskPromptDeleteButton = document.querySelector("#task-delete-button");
+    this.taskPromptDeleteWindow = document.querySelector("#prompt-delete-window");
+    this.taskPromptDeleteCloser = document.querySelector("#prompt-closer");
+    this.taskDeleteAllButton = document.querySelector("#delete-all-tasks-button");
+
+    this.db = null;
+    this.ini();
   }
 
-  /** @description Invokes other functions to start the app */
-  instantiate_todo() {
-    this.formCreate.addEventListener("submit", (submitEvent) => {
-      submitEvent.preventDefault();
-    });
-
-    this.taskInput.addEventListener("blur", () => {
-      const task_content = this.taskInput.innerText;
-      if (task_content.replace(/\s|\n/g, "") === "") this.taskInput.innerHTML = "";
-    });
-
-    this.taskInput.addEventListener("keydown", (keyboardEvent) => {
-      if (keyboardEvent.key === "Enter" && !keyboardEvent.shiftKey) {
-        this.createTask();
-        keyboardEvent.preventDefault();
-      }
-    });
-
-    this.taskInput.addEventListener("paste", (clipboardEvent) => {
-      clipboardEvent.preventDefault();
-      const data = (clipboardEvent.originalEvent || clipboardEvent).clipboardData.getData(
-        "text/plain"
-      );
-      const selection = window.getSelection();
-      const range = selection.getRangeAt(0);
-
-      range.deleteContents();
-      range.insertNode(document.createTextNode(data));
-      range.collapse(false);
-
-      selection.removeAllRanges();
-      selection.addRange(range);
-    });
-
-    this.taskButton.addEventListener("click", () => this.createTask());
-
-    /* Avoids implementing logic for counting tasks */
-    const countObserver = new MutationObserver((mutationList) => {
-      for (const mutation of mutationList) {
-        if (mutation.type !== "childList") continue;
-        const count = this.taskList.children.length;
-        this.taskCount.innerHTML = `${count}`;
-      }
-    });
-    countObserver.observe(this.taskList, { childList: true });
-    this.taskSortButton.addEventListener("click", () => this.sortList());
-    this.taskSearchInput.addEventListener("keydown", () => this.searchTask());
-    this.setDialogEvents();
+  ini() {
+    this.setTaskEvents();
+    this.setupIndexedDB();
   }
 
-  /** @description creates a new task */
+  /** @description set events related to creating, editing and interacting with tasks */
+  setTaskEvents() {
+    this.taskForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      this.createTask();
+    });
+    this.taskPromptDeleteButton.addEventListener("click", () => this.openDeleteView());
+    this.taskPromptDeleteCloser.addEventListener("click", () => this.closeDeleteView());
+    this.taskDeleteAllButton.addEventListener("click", () => {
+      this.taskList.innerHTML = "";
+      this.closeDeleteView();
+    });
+    this.setTaskCount();
+  }
+
+  /** @description creates a task in the todolist */
   createTask() {
-    if (this.isEmpty(this.taskInput.innerText)) return;
-    const content = this.taskInput.innerHTML.normalize();
-    this.createTaskNode(content);
+    const voidLikeSource = voidLikeRegex.source;
+    const specialTrim = new RegExp(`^(${voidLikeSource})|(${voidLikeSource})$`, "g");
+    const taskValue = this.taskInput.value.trim().replace(specialTrim, "");
+    if (!taskValue || taskValue.replace(voidLikeRegex, "").length === 0) return;
 
-    this.taskInput.innerHTML = "";
+    const tasks = this.taskList.querySelectorAll("p");
+    for (const task of tasks) {
+      const containsTaskValue = task.textContent === taskValue;
+      if (containsTaskValue) {
+        const parentTask = task.parentElement.parentElement;
+        this.taskInput.disabled = "true";
+        this.taskInput.setAttribute("placeholder", "Scrolling...");
+        this.handleScrollRevert(parentTask);
+        return;
+      }
+    }
+
+    const task = new Task(taskValue, this.db);
+    const taskElement = task.createTaskElement();
+    this.taskList.appendChild(taskElement);
   }
 
-  /** @description creates the task node with the template, or without, if it is not supported */
-  createTaskNode(task = "") {
-    if (this.taskDB) this.addToIndexedDB(task);
-    let hasDuplicates = this.checkDuplicates(task);
-    if (hasDuplicates) return;
-    if ("content" in document.createElement("template")) {
-      this.createTaskTemplate(task);
+  /** @description reverts the ability to scroll  */
+  async handleScrollRevert(target) {
+    const intersectionObserver = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+      if (entry.isIntersecting) {
+        this.taskInput.disabled = "";
+        this.taskInput.setAttribute("placeholder", "Create task");
+        this.taskInput.focus();
+      }
+    });
+
+    intersectionObserver.observe(target);
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /** @description sets a counter for the number of tasks when the list mutates and computes statistics */
+  setTaskCount() {
+    const callback = (mutationList) => {
+      for (const mutation of mutationList) {
+        if (mutation.type !== "childList" && mutation.type !== "attributes") continue;
+        this.handleUpdateComputations();
+      }
+    };
+    const mutationObserverOptions = {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    };
+    const observer = new MutationObserver(callback);
+    observer.observe(this.taskList, mutationObserverOptions);
+  }
+
+  /** @description handles computations when the list mutates */
+  handleUpdateComputations() {
+    const count = this.taskList.childElementCount;
+    if (count === 0) {
+      this.taskCount.textContent = "No tasks";
+    } else if (count === 1) {
+      this.taskCount.textContent = `1 task`;
     } else {
-      this.createTaskNoTemplate(task);
+      this.taskCount.textContent = `${count} tasks`;
+    }
+
+    const checkedTasks = document.querySelectorAll("[data-checked='checked']");
+    const completedTasks = checkedTasks.length;
+
+    if (completedTasks === 0) {
+      this.taskCompletedCount.textContent = "No tasks accomplished";
+      return;
+    }
+
+    const completedPercent = Math.round((completedTasks / count) * 100);
+    if (completedTasks === 1 && completedPercent !== 100) {
+      this.taskCompletedCount.textContent = `1 completed task (${Math.round((1 / count) * 100)}%)`;
+    } else if (completedPercent === 100) {
+      this.taskCompletedCount.textContent = "All tasks completed";
+    } else {
+      this.taskCompletedCount.textContent = `${completedTasks} completed tasks (${completedPercent}%)`;
     }
   }
 
-  /** @description creates a task if templates are supported */
-  createTaskTemplate(taskText = "") {
-    const clone = this.taskTemplate.content.firstElementChild.cloneNode(true);
-    const taskContent = clone.querySelector("span");
-    taskContent.innerHTML = taskText;
-
-    const removeButton = clone.querySelector("#close");
-    removeButton.addEventListener("click", (mouseEvent) => {
-      if (this.taskDB) {
-        const span =
-          mouseEvent.target.parentElement.parentElement.parentElement.querySelector("span");
-        this.removeFromIndexedDB(span.innerText);
-      }
-      clone.remove();
-    });
-
-    const editButton = clone.querySelector("#edit");
-
-    const editTemplate = () => {
-      const taskSpan = clone.querySelector("span");
-      const editClone = this.taskEditTemplate.content.firstElementChild.cloneNode(true);
-      const cloneContent = taskSpan.innerHTML;
-
-      taskSpan.replaceWith(editClone);
-      editClone.innerHTML = cloneContent;
-      editClone.focus();
-
-      const finalizeEdit = () => {
-        editClone.removeEventListener("blur", finalizeEdit);
-        const content = editClone.innerHTML;
-        const span = document.createElement("span");
-
-        if (!this.isEmpty(content)) {
-          if (this.taskDB) this.editTaskContentFromIndexedDB(cloneContent, content);
-          span.innerHTML = content;
-        } else {
-          span.innerHTML = cloneContent;
-        }
-        editClone.replaceWith(span);
-      };
-
-      editClone.addEventListener("blur", finalizeEdit);
-      editClone.addEventListener("keydown", (keyboardEvent) => {
-        if (keyboardEvent.key === "Enter" && !keyboardEvent.shiftKey) {
-          finalizeEdit();
-          keyboardEvent.preventDefault();
-        }
-      });
-      editButton.addEventListener("click", editTemplate);
-    };
-
-    editButton.addEventListener("click", editTemplate);
-    this.taskList.appendChild(clone);
+  /** @description Opens the view to delete all tasks */
+  openDeleteView() {
+    this.taskPromptDeleteWindow.style.display = "block";
+    this.taskPromptDeleteCloser.style.display = "block";
   }
 
-  /** @description creates a task if templates are not supported */
-  createTaskNoTemplate(taskText = "") {
-    const taskNode = document.createElement("div");
-    const taskContent = document.createElement("span");
-    taskContent.innerHTML = taskText;
-
-    const hgroup = document.createElement("hgroup");
-    const div = document.createElement("div");
-
-    const editButton = document.createElement("button");
-
-    const editTask = () => {
-      const taskContents =
-        editButton.parentElement.parentElement.parentElement.querySelector("span");
-      editButton.removeEventListener("click", editTask);
-
-      const content = taskContents.innerHTML;
-      const editPrompt = document.createElement("div");
-
-      editPrompt.setAttribute("contenteditable", "true");
-      taskContents.replaceWith(editPrompt);
-      editPrompt.innerHTML = content;
-      editPrompt.focus();
-
-      const finalizeEdit = () => {
-        const editedContent = editPrompt.innerHTML;
-
-        editPrompt.removeEventListener("blur", finalizeEdit);
-        const span = document.createElement("span");
-
-        if (!this.isEmpty(editedContent)) {
-          if (this.taskDB) this.editTaskContentFromIndexedDB(editedContent, content);
-          span.innerHTML = editedContent;
-        } else {
-          span.innerHTML = content;
-        }
-
-        editPrompt.replaceWith(span);
-        editButton.addEventListener("click", editTask);
-      };
-
-      editPrompt.addEventListener("blur", finalizeEdit);
-
-      editPrompt.addEventListener("keydown", (keyboardEvent) => {
-        if (keyboardEvent.key === "Enter" && !keyboardEvent.shiftKey) {
-          finalizeEdit();
-          keyboardEvent.preventDefault();
-        }
-      });
-    };
-    editButton.addEventListener("click", editTask);
-
-    const removeButton = document.createElement("button");
-    removeButton.addEventListener("click", (mouseEvent) => {
-      const span =
-        mouseEvent.target.parentElement.parentElement.parentElement.querySelector("span");
-      this.removeFromIndexedDB(span.innerText);
-      taskNode.remove();
-    });
-
-    const image_data = [
-      { src: "./src/svg/edit.svg", alt: "edit" },
-      { src: "./src/svg/close.svg", alt: "close" },
-    ];
-
-    [editButton, removeButton].forEach((button, index) => {
-      const img = document.createElement("img");
-      img.src = image_data[index].src;
-      img.alt = image_data[index].alt;
-      img.setAttribute("width", "20");
-      img.setAttribute("height", "20");
-      button.appendChild(img);
-    });
-
-    div.append(editButton, removeButton);
-    hgroup.appendChild(div);
-    taskNode.append(hgroup, taskContent);
-    this.taskList.appendChild(taskNode);
+  closeDeleteView() {
+    this.taskPromptDeleteWindow.style.display = "none";
+    this.taskPromptDeleteCloser.style.display = "none";
   }
 
-  /**
-   * @description checks if a string, content is empty or not,
-   * @returns {boolean}
-   */
-  isEmpty(content = "") {
-    const spaceLikeCharacters =
-      /\s|\u{3164}|\u{200B}|\u{200D}|\u{200E}|\u{200F}|\u{FEFF}|\u{FFA0}|\u{FFFC}/gu;
-    return content.replace(spaceLikeCharacters, "").normalize() === "";
-  }
-
-  /**
-   * @description Instantiates IndexedDB or localStorage, if IndexedDB is not supported
-   */
-  checkStoredData() {
-    if (!"indexedDB" in window) {
-      this.instantiateIndexedDB();
-    } else {
-      this.instantiate_todo();
-      this.instantiateLocalStorage();
-    }
-  }
-
-  /** @description Instantiates a new IndexedDB database */
-  instantiateIndexedDB() {
-    const databaseName = "TaskDataBase";
-    const request = indexedDB.open(databaseName, 1);
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      db.createObjectStore("Tasks", { keyPath: "content" });
+  /** @description sets up a database to persist content through reloads */
+  setupIndexedDB() {
+    const openRequest = indexedDB.open(this.databaseName, 1);
+    openRequest.onerror = () => {
+      console.error(`Failed opening indexedDB : ${openRequest.error}`);
     };
 
-    request.onerror = (event) => {
-      console.error(`Error openining IDB : ${event.target.error}`);
-      this.instantiateLocalStorage(); // fallback
-    };
-
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      this.taskDB = db;
-      this.instantiate_todo();
-      this.loadIndexedDBValues();
-    };
-  }
-
-  /** @description Loads indexedDB values on page load */
-  loadIndexedDBValues() {
-    const transaction = this.taskDB.transaction(["Tasks"], "readwrite");
-    const objectStore = transaction.objectStore("Tasks");
-
-    const request = objectStore.getAll();
-    request.onsuccess = (event) => {
-      const tasks = event.target.result;
-      let addTask;
-      if ("content" in document.createElement("template")) {
-        addTask = (task) => this.createTaskTemplate(task);
-      } else {
-        addTask = (task) => this.createTaskNoTemplate(task);
-      }
-      for (const task of tasks) {
-        addTask(task.content);
+    openRequest.onupgradeneeded = () => {
+      const db = openRequest.result;
+      if (!db.objectStoreNames.contains("tasks")) {
+        const objectStore = db.createObjectStore("tasks", { autoIncrement: true, keyPath: "id" });
+        objectStore.createIndex("content", "content", { unique: false });
       }
     };
 
-    request.onerror = (event) => {
-      console.error(`Error loading tasks : ${event.target.error}`);
-    };
-  }
+    openRequest.onsuccess = () => {
+      const db = openRequest.result;
 
-  /** @description Adds a task to the IndexedDB's object store */
-  addToIndexedDB(task) {
-    const transaction = this.taskDB.transaction(["Tasks"], "readwrite");
-    const objectStore = transaction.objectStore("Tasks");
+      if (this.db === null) {
+        this.db = db;
+      }
 
-    const taskContent = { content: task };
-    const request = objectStore.add(taskContent);
+      const transaction = db.transaction("tasks", "readwrite");
+      const tasks = transaction.objectStore("tasks");
+      const index = tasks.index("content");
 
-    request.onerror = (event) => {
-      console.error(`Error occured while appending to IDB : ${event.target.error}`);
-    };
-  }
+      index.openCursor().onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          const contentObject = cursor.value;
+          const taskValue = contentObject.content;
 
-  /** @description Removes a task from the IndexedDB's object store  */
-  removeFromIndexedDB(content) {
-    const transaction = this.taskDB.transaction(["Tasks"], "readwrite");
-    const objectStore = transaction.objectStore("Tasks");
-
-    const request = objectStore.openCursor();
-
-    request.onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
-        const task = cursor.value;
-
-        if (this.decodeHTML(task.content) === content) {
-          cursor.delete();
-          return;
+          const task = new Task(taskValue, this.db); 
+          const taskElement = task.createTaskElement(); 
+          this.taskList.appendChild(taskElement); 
         }
         cursor.continue();
-      } else {
-        console.log("Value not found");
-        console.log(content);
-      }
-    };
-    request.onerror = (event) => {
-      console.error(`Error removing from IDB : ${event.target.error}`);
-    };
-  }
+      };
 
-  /** @description Edit a task's content stored in the IndexedDB */
-  editTaskContentFromIndexedDB(oldValue, newValue) {
-    const transaction = this.taskDB.transaction(["Tasks"], "readwrite");
-    const objectStore = transaction.objectStore("Tasks");
+      this.taskForm.addEventListener("submit", () => {
+        const voidLikeSource = voidLikeRegex.source;
+        const specialTrim = new RegExp(`^(${voidLikeSource})|(${voidLikeSource})$`, "g");
+        const taskValue = this.taskInput.value.replace(specialTrim).trim();
 
-    const request = objectStore.openCursor();
+        if (!taskValue || taskValue.replace(voidLikeRegex, "").length === 0) return;
 
-    request.onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
-        const task = cursor.value;
+        const transaction = db.transaction("tasks", "readwrite");
+        const tasks = transaction.objectStore("tasks");
+        const request = tasks.add({ content: taskValue });
 
-        if (task.content === oldValue) {
-          const deleteRequest = cursor.delete();
-
-          deleteRequest.onsuccess = () => {
-            const newTask = { content: newValue };
-            const addRequest = objectStore.add(newTask);
-            addRequest.onerror = (event) => {
-              console.error(`Error occured while adding task, after editing ${event.target.error}`);
-            };
-          };
-          deleteRequest.onerror = (event) => {
-            console.error(`Error occured while deleting task ${event.targer.error}`);
-          };
-          return;
-        }
-        cursor.continue();
-      } else {
-        console.log("Provided value not found");
-      }
-    };
-
-    request.onerror = (event) => {
-      console.error(`Error editing from IDB : ${event.target.error}`);
-    };
-  }
-
-  /** @description Instantiates localStorage */
-  instantiateLocalStorage() {
-    if (JSON.parse(localStorage.getItem("Tasks"))) {
-      const taskCollection = JSON.parse(localStorage.getItem("Tasks"));
-      taskCollection.forEach((taskContentObj) => {
-        this.createTaskNode(taskContentObj.content);
-      });
-    }
-
-    window.addEventListener("beforeunload", () => {
-      const tasks = [];
-      for (let i = 0; i < this.taskList.childElementCount; i++) {
-        const task = this.taskList.children[i];
-        const content = {
-          content: task.querySelector("span").innerHTML,
+        this.taskInput.value = "";
+        request.onerror = () => {
+          console.error(`IDB : Failed adding task ${request.error}`);
         };
-        tasks.push(content);
-      }
-      localStorage.setItem("Tasks", JSON.stringify(tasks));
-    });
-  }
-
-  /** @description Sets click event for dialog box */
-  setDialogEvents() {
-    const handleClick = (x) => {
-      if (x === "show") {
-        this.taskDialog.showModal();
-        document.body.style.overflowY = "hidden";
-      } else {
-        if (x === "delete") this.taskList.innerHTML = "";
-        this.taskDialog.close();
-        document.body.style.overflowY = "auto";
-      }
+      });
     };
-    this.taskDeleteAllButton.addEventListener("click", () => handleClick("show"));
-    this.taskDialogClose.addEventListener("click", handleClick);
-    this.taskDialogButtons[0].addEventListener("click", () => handleClick("delete"));
-    this.taskDialogButtons[1].addEventListener("click", handleClick);
-  }
-
-  /** @description sorts list alphabetically */
-  sortList() {
-    const children = this.taskList.children;
-    if (children.length <= 1) return; // nothing to sort
-
-    const childrenArray = Array.from(children);
-    childrenArray.sort((a, b) => a.textContent.localeCompare(b.textContent));
-
-    for (const task of childrenArray) {
-      this.taskList.appendChild(task);
-    }
-  }
-
-  /** @description Searches for a task on keydown, matching a certain query */
-  searchTask() {
-    const query = this.taskSearchInput.value.toLowerCase();
-    if (this.isEmpty(query)) return;
-
-    const tasks = this.taskList.children;
-    for (const task of tasks) {
-      const taskContent = task.children[1].innerText;
-      task.style.display = taskContent.includes(query) ? "block" : "none";
-    }
-  }
-
-  /** 
-   * @description Decodes HTML. Changes the &gt; tag to ">" to obtain the actual value 
-   * Used with IndexedDB to check the litteral content to delete according to the 
-   * task's value ;
-   * */
-  decodeHTML(value) {
-    const parser = new DOMParser();
-    const decodedString = parser.parseFromString(value, "text/html");
-    return decodedString.documentElement.textContent;
-  }
-
-  /**
-   * @description Prevents from adding duplicate tasks in the list
-   * @returns {true | false} true if a duplicate is found false if not
-   * FIXME: this probably sucks performance-wise
-   * */
-  checkDuplicates(query) {
-    const tasks = this.taskList.children;
-    for (const task of tasks) {
-      if (task.querySelector("span").innerText === query) {
-        task.scrollIntoView({ behavior: "smooth", block: "start" });
-        return true;
-      }
-    }
-    return false;
   }
 }
 
