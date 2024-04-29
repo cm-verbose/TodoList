@@ -141,16 +141,16 @@ export default class Task {
             const contentObject = cursor.value;
             const taskValue = contentObject.content;
             if (taskValue === this.oldContent) {
-              contentObject.content = editedContent; 
-              cursor.update(contentObject); 
-              return; 
+              contentObject.content = editedContent;
+              cursor.update(contentObject);
+              return;
             }
             cursor.continue();
           }
         };
       }
 
-      this.paraNode.textContent = editedContent; 
+      this.paraNode.textContent = editedContent;
       this.paraNode.removeAttribute("contenteditable");
       this.paraNode.removeEventListener("blur", this.handleEditBlur());
     };

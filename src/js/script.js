@@ -167,11 +167,11 @@ class Main {
           const contentObject = cursor.value;
           const taskValue = contentObject.content;
 
-          const task = new Task(taskValue, this.db); 
-          const taskElement = task.createTaskElement(); 
-          this.taskList.appendChild(taskElement); 
+          const task = new Task(taskValue, this.db);
+          const taskElement = task.createTaskElement();
+          this.taskList.appendChild(taskElement);
+          cursor.continue();
         }
-        cursor.continue();
       };
 
       this.taskForm.addEventListener("submit", () => {

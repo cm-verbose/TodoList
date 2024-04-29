@@ -10,7 +10,7 @@
   ],
   "background_color": "#ffffff",
   "categories": ["productivity"],
-  "description": "A simple todo list application",
+  "description": "A todo list application",
   "display": "minimal-ui",
   "dir": "ltr",
   "orientation": "landscape",
