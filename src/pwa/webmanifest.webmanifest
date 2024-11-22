@@ -1,21 +1,5 @@
 {
   "$schema": "https://json.schemastore.org/web-manifest.json",
   "name": "Todo list",
-  "icons": [
-    {
-      "src": "../icons/svg/logo.svg",
-      "purpose": "maskable any",
-      "sizes": "any"
-    }
-  ],
-  "background_color": "#ffffff",
-  "categories": ["productivity"],
-  "description": "A todo list application",
-  "display": "minimal-ui",
-  "dir": "ltr",
-  "orientation": "landscape",
-  "short_name": "Todolist",
-  "theme_color": "#ff9b61",
-  "start_url": "../index.html",
-  "scope": "../"
+  "short_name": "Todos"
 }

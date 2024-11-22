@@ -1,44 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Create and organise your tasks with this todo-list" />
+    <link rel="stylesheet" type="text/css" href="./css/style.css" />
+    <link rel="manifest" href="./pwa/webmanifest.webmanifest" />
+    <title>Todo list</title>
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="A todo list application">
-  <link rel="shortcut icon" href="./icons/svg/logo.svg" type="image/svg+xml">
-  <link rel="manifest" href="./pwa/webmanifest.webmanifest">
-  <link rel="stylesheet" href="./css/style.css">
-  <title>Todo list</title>
-</head>
-
-<body>
-  <div id="main">
-    <div id="task-container"></div>
-    <form id="task-form">
-      <input type="text" placeholder="Create task" id="task-submit-input" autocomplete="off" maxlength="1024">
-      <button id="task-submit-button">
-        <img src="./svg/add.svg" alt="create-task-button">
-      </button>
-    </form>
-  </div>
-  <nav>
-    <header>
-      <h1 id="app-title">Todos</h1>
-    </header>
-    <section>
-      <ul id="tasklist-tags">
-        <li id="task-count-field"><span id="task-count">No tasks</span></li>
-        <li id="task-completion-field"><span id="task-completion">No tasks accomplished</span></li>
-        <li id="task-delete-button">delete all tasks</li>
-      </ul>
-    </section>
-  </nav>
-  <div id="prompt-delete-window">
-    <h1>Are you sure to delete all tasks ?</h1>
-    <button id="delete-all-tasks-button">Delete all tasks</button>
-  </div>
-  <div id="prompt-closer"></div>
-  <script src="./js/script.js" type="module"></script>
-</body>
-
+  <body>
+    <div id="main">
+      <nav>
+        <ul>
+          <li data-view-target="view-list">Lists</li>
+        </ul>
+      </nav>
+      <main>
+        <div id="view-task-list" class="view">
+          <header>
+            <input type="text" id="task-list-name" placeholder="Task list name" value="New List" />
+          </header>
+          <ul id="task-list"></ul>
+          <div id="input-wrapper">
+            <input type="text" placeholder="Create a new task" id="task-input" autocomplete="off" />
+            <button id="task-create-button">+</button>
+          </div>
+        </div>
+        <div id="view-list" class="view" data-active-view>
+          <h1>Lists</h1>
+          <button id="create-list-popup-button" class="dark-button">Create new list</button>
+          <ul id="task-lists"></ul>
+        </div>
+      </main>
+      <div class="popup" id="list-creation-popup" style="display: none">
+        <h2>Create a list</h2>
+        <input type="text" placeholder="List name" id="list-name-input" autocomplete="off" />
+        <button id="create-list-button" class="dark-button">Create</button>
+      </div>
+      <div id="popup-background" style="display: none"></div>
+    </div>
+    <script src="./js/script.js" type="module"></script>
+  </body>
 </html>
